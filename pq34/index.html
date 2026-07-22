@@ -517,11 +517,16 @@ window.CONFIG = {
 const CONFIG = window.CONFIG;
 const ASSETS = window.ASSETS || null;
 const PNG_FULL={m01:1};   // m01 is pixel art - PNG, not JPEG
+// Absolute path, not relative: this file is served nested at /pq34/, and a
+// visit to "/pq34" (no trailing slash) would otherwise resolve "assets/..."
+// against the site root instead of /pq34/assets/... . If you ever move this
+// game to a different path, update BASE to match.
+const BASE="/pq34/";
 function ASSET(k){
   if(ASSETS && ASSETS[k]) return ASSETS[k];
-  if(k==="ellinia"||k==="audition") return "assets/audio/"+k+".mp3";
-  if(k.endsWith("_px")) return "assets/img/"+k+".png";
-  return "assets/img/"+k+(PNG_FULL[k]?".png":".jpg");
+  if(k==="ellinia"||k==="audition") return BASE+"assets/audio/"+k+".mp3";
+  if(k.endsWith("_px")) return BASE+"assets/img/"+k+".png";
+  return BASE+"assets/img/"+k+(PNG_FULL[k]?".png":".jpg");
 }
 
 const GW=480, GH=854;
