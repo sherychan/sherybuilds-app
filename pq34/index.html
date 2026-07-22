@@ -229,7 +229,9 @@
       radial-gradient(120% 100% at 50% 30%, #0a2b1f, #04120c 70%); overflow:auto; }
   .gift{
     background:linear-gradient(180deg,#fdfcf6,#f6f2e6); color:#26382e; border-radius:18px;
-    width:min(92vw,440px); padding:26px 22px 24px; box-shadow:0 24px 60px rgba(0,0,0,.55);
+    /* 100% = the .layer content box, which already excludes its 24px padding.
+       92vw ignored that padding and overflowed on phones, clipping the card left. */
+    width:min(100%,440px); padding:26px 22px 24px; box-shadow:0 24px 60px rgba(0,0,0,.55);
     border:1px solid rgba(255,255,255,.6); position:relative; margin:auto;
   }
   .gift::before{ content:""; position:absolute; inset:8px; border:1.5px dashed #d6b9c8; border-radius:12px; pointer-events:none; }
