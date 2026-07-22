@@ -163,10 +163,12 @@
   .key.jump{ font-size:22px; }
 
   /* rhythm controls (4 arrows) */
+  /* left/width are set from the canvas lane geometry in layoutLanes() so the
+     buttons sit directly under their dancer and note lane at any screen size */
   #rcontrols{ position:fixed; z-index:16; left:0; right:0; bottom:0; display:none;
-    padding:0 14px calc(env(safe-area-inset-bottom) + 20px);
-    justify-content:center; gap:12px; pointer-events:none; }
-  #rcontrols .rkey{ pointer-events:auto; width:min(20vw,84px); height:76px; border-radius:16px;
+    height:calc(env(safe-area-inset-bottom) + 96px); pointer-events:none; }
+  #rcontrols .rkey{ position:absolute; bottom:calc(env(safe-area-inset-bottom) + 20px);
+    pointer-events:auto; height:76px; border-radius:16px;
     display:flex; align-items:center; justify-content:center; font-size:30px; color:#eafcff;
     background:linear-gradient(180deg, rgba(38,228,255,.14), rgba(8,20,34,.85));
     border:2px solid rgba(91,123,255,.55); box-shadow:0 6px 16px rgba(0,0,0,.5); touch-action:none; }
@@ -214,7 +216,9 @@
     opacity:0; transition:opacity 1s ease; z-index:1; }
   #reelImg.a{ opacity:1; }
   .reelveil{ position:absolute; inset:0; background:linear-gradient(180deg, rgba(4,16,10,.15) 40%, rgba(4,16,10,.85) 100%); }
-  #reelCap{ position:absolute; left:0; right:0; bottom:7%; z-index:3; font-family:'Caveat'; font-weight:600;
+  /* sit clear of the SKIP button: 7% on tall screens, a fixed gap on short ones */
+  #reelCap{ position:absolute; left:0; right:0; z-index:3; font-family:'Caveat'; font-weight:600;
+    bottom:max(7%, calc(env(safe-area-inset-bottom) + 86px));
     text-shadow:0 2px 10px rgba(0,0,0,.85), 0 0 22px rgba(0,0,0,.7); padding:0 18px;
     font-size:clamp(24px,7vw,38px); color:#fff; text-shadow:0 3px 18px rgba(0,0,0,.8); padding:0 24px; }
   #reelSkip{ position:absolute; z-index:3; bottom:calc(env(safe-area-inset-bottom) + 20px); left:50%; transform:translateX(-50%); }
@@ -530,6 +534,11 @@ function ASSET(k){
 }
 
 const GW=480, GH=854;
+// One source of truth for the dance floor columns: the four sprites, the four
+// note lanes and the four on-screen buttons all key off LANE_CX (lane centres).
+const LANE_CX=[GW*0.5-128, GW*0.5-48, GW*0.5+48, GW*0.5+126];
+const LANE_W=76, LANE_LBL=["◀","▲","▼","▶"];
+const LANE_X=LANE_CX.map(cx=>cx-LANE_W/2);   // drawing uses left edges
 const cv=document.getElementById("game"), ctx=cv.getContext("2d");
 const reduceMotion=window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 const $=id=>document.getElementById(id);
@@ -544,6 +553,17 @@ function resize(){
   cv.style.width=cssW+"px"; cv.style.height=cssH+"px";
   cv.width=Math.round(cssW*dpr); cv.height=Math.round(cssH*dpr); scale=cv.width/GW;
   ctx.imageSmoothingEnabled=true;
+  layoutLanes(fit,cssW,vw);
+}
+// Map canvas lane geometry onto the fixed-position buttons. The canvas is
+// letterboxed and centred by #stage, so mirror that offset here.
+function layoutLanes(fit,cssW,vw){
+  const originX=(vw-cssW)/2;
+  document.querySelectorAll("#rcontrols .rkey").forEach(k=>{
+    const i=+k.dataset.lane;
+    k.style.left=(originX+LANE_X[i]*fit)+"px";
+    k.style.width=(LANE_W*fit)+"px";
+  });
 }
 window.addEventListener("resize",resize);
 window.addEventListener("orientationchange",()=>setTimeout(resize,200));
@@ -1336,14 +1356,14 @@ $("summitBtn").addEventListener("click",()=>{ showLayer("summit",false); startRh
 
 /* ---- rhythm ---- */
 let notes=[],rTime=0,rStart=0,rScore,rActive=false,rTravel=1.7;
-const HIT_Y=GH-210,LANE_X=[GW*0.5-135,GW*0.5-45,GW*0.5+45,GW*0.5+135],LANE_LBL=["◀","▲","▼","▶"],LANE_W=76;
+const HIT_Y=GH-210;
 function buildNotes(){ notes=[]; const beat=60/CONFIG.RHYTHM_BPM; let t=CONFIG.RHYTHM_OFFSET;
   const patt=[1,1,2,1,1,1.5,1,2,1,1]; let pi=0,last=-1;
   for(let i=0;i<CONFIG.RHYTHM_NOTES;i++){ let lane=Math.floor(Math.random()*4); if(lane===last&&Math.random()<.6)lane=(lane+1)%4; last=lane;
     notes.push({t,lane,judged:false,hit:false,miss:false});
     t+=beat*patt[pi%patt.length]; pi++; } }
 function startRhythm(){ state="rhythm"; paused=false; buildNotes(); rScore={perfect:0,good:0,miss:0,combo:0,maxCombo:0,total:notes.length};
-  controls.style.display="none"; rcontrols.style.display="flex"; hud.style.display="none"; audEllinia.pause();
+  controls.style.display="none"; rcontrols.style.display="block"; hud.style.display="none"; audEllinia.pause();
   audAudition.currentTime=0; audAudition.volume=0; fade(audAudition,0.8,500); rStart=performance.now()/1000; rActive=true; }
 let rparticles=[],laneFlash=[0,0,0,0],laneJudge=["","","",""];
 function rhythmHit(lane){ if(state!=="rhythm"||!rActive)return; let best=null,bd=1e9;
@@ -1360,10 +1380,10 @@ function stepRhythm(dt){ rTime=performance.now()/1000-rStart;
 function roundRect(x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
 function drawDanceDuo(t){ const y=GH*0.545;
   const cast=[
-    {def:CHARS.angel,  x:GW*0.5-128, face:1,  ph:0.9, sc:1.25, a:0.62, lbl:CONFIG.ANGEL_NAME,  main:false},
-    {def:CHARS.player, x:GW*0.5-48,  face:1,  ph:0.0, sc:1.6,  a:1.0,  lbl:CONFIG.THIEF_NAME,  main:true },
-    {def:CHARS.cleric, x:GW*0.5+48,  face:-1, ph:0.5, sc:1.6,  a:1.0,  lbl:CONFIG.CLERIC_NAME, main:true },
-    {def:CHARS.callie, x:GW*0.5+126, face:-1, ph:1.5, sc:1.25, a:0.68, lbl:CONFIG.GODDAUGHTER, main:false}
+    {def:CHARS.angel,  x:LANE_CX[0], face:1,  ph:0.9, sc:1.25, a:0.62, lbl:CONFIG.ANGEL_NAME,  main:false},
+    {def:CHARS.player, x:LANE_CX[1], face:1,  ph:0.0, sc:1.6,  a:1.0,  lbl:CONFIG.THIEF_NAME,  main:true },
+    {def:CHARS.cleric, x:LANE_CX[2], face:-1, ph:0.5, sc:1.6,  a:1.0,  lbl:CONFIG.CLERIC_NAME, main:true },
+    {def:CHARS.callie, x:LANE_CX[3], face:-1, ph:1.5, sc:1.25, a:0.68, lbl:CONFIG.GODDAUGHTER, main:false}
   ];
   // floor glow so they read as standing on a dancefloor, not floating
   ctx.save(); ctx.globalCompositeOperation="lighter";
