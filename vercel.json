@@ -4,7 +4,7 @@
     {
       "source": "/pq34/assets/(.*)",
       "headers": [
-        { "key": "Cache-Control", "value": "private, max-age=31536000, immutable" }
+        { "key": "Cache-Control", "value": "private, max-age=0, must-revalidate" }
       ]
     },
     {
